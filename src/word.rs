@@ -83,7 +83,6 @@ impl WordBuilder {
 }
 
 impl Word {
-    /// Creates a new word initialized to zero.
     fn new(word_size: LargestType, value: LargestType) -> Self {
         Self {
             data: WordType::new(word_size, value)

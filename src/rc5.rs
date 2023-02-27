@@ -86,9 +86,8 @@ impl RC5 {
 		let num_bytes = output.len() * num_bytes_per_word;
 		let mut ret = vec![0_u8 ; num_bytes];
 		let mut i = 0_usize;
-		let mut new_output = output.clone();
 
-		for w in new_output.iter_mut() {
+		for w in output.iter() {
 
 			for byte in w.to_le_bytes() {
 				ret[i] = byte;
@@ -107,16 +106,7 @@ impl RC5 {
 		let bytes_per_word = self.word_size / 8;
 		let num_words = utils::div_ceil(key_size, bytes_per_word);
 
-		let mut l = self.word_builder.new_word_vec(num_words);
-
-		for i in (0..key_size).rev() {
-			if bytes_per_word > 1 {
-				l[i / bytes_per_word] = (l[i / bytes_per_word] << 8_u8) + key[i];
-			}
-			else {
-				l[i / bytes_per_word] = self.word_builder.build_word(key[i] as LargestType);
-			}
-		}
+		let mut l = self.parse(key);
 
 		// Initializing the array S.
 		let t = 2 * (self.num_rounds + 1) as usize;
