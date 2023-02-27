@@ -64,7 +64,7 @@ impl RC5 {
 		}
 	}
 
-	/// Converts Vec<u8> to Vec<Word<T>>
+	/// Converts Vec<u8> to Vec<Word>
 	fn parse(&self, input: &[u8]) -> Vec<Word> {
 		assert!(self.word_size % 8 == 0);
 

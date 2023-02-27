@@ -112,7 +112,7 @@ mod rc5_16_16_8_tests {
 }
 
 #[cfg(test)]
-mod rc5_32_20_16 {
+mod rc5_32_20_16_tests {
 	use super::*;
 
 	#[test]
@@ -126,7 +126,7 @@ mod rc5_32_20_16 {
 }
 
 #[cfg(test)]
-mod rc5_64_24_24 {
+mod rc5_64_24_24_tests {
 	use super::*;
 
 	#[test]
@@ -143,7 +143,7 @@ mod rc5_64_24_24 {
 }
 
 #[cfg(test)]
-mod rc5_128_28_32 {
+mod rc5_128_28_32_tests {
 	use super::*;
 
 	#[test]
