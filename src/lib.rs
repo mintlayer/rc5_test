@@ -6,13 +6,29 @@ mod word;
 use crate::rc5::RC5;
 
 /// Returns a cipher text for a given key and plaintext
-fn encode_rc5(word_size_in_bits: usize, num_rounds:u8, key_size:u8, key: &[u8], plaintext: &[u8]) -> Vec<u8> {
+fn encode_rc5(
+			word_size_in_bits: usize,
+			num_rounds:u8,
+			key_size:u8,
+			key: &[u8],
+			plaintext: &[u8]
+
+			) -> Vec<u8> {
+
 	let rc5 = RC5::new(word_size_in_bits, num_rounds, key_size);
 	rc5.encrypt(&key, &plaintext)
 }
 
 /// Returns a plaintext for a given key and ciphertext
-fn decode_rc5(word_size_in_bits: usize, num_rounds:u8, key_size:u8, key: &[u8], ciphertext: &[u8]) -> Vec<u8> {
+fn decode_rc5(
+			word_size_in_bits: usize,
+			num_rounds:u8,
+			key_size:u8,
+			key: &[u8],
+			ciphertext: &[u8]
+
+			) -> Vec<u8> {
+
 	let rc5 = RC5::new(word_size_in_bits, num_rounds, key_size);
 	rc5.decrypt(&key,&ciphertext)
 }
@@ -142,6 +158,3 @@ mod rc5_128_28_32 {
 		assert!(&pt[..] == &res[..]);
 	}
 }
-
-
-

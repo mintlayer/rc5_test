@@ -73,13 +73,13 @@ impl WordBuilder {
         Self { word_size }
     }
     
-    pub fn build_word(&self, value: LargestType) -> Word {
+    pub fn new_word(&self, value: LargestType) -> Word {
         Word::new(self.word_size, value)
     }
 
     /// Creates a new word vector.
     pub fn new_word_vec(&self, num_words: usize) -> Vec<Word> {
-        vec![self.build_word(0) ; num_words]
+        vec![self.new_word(0) ; num_words]
     }
 }
 
@@ -293,48 +293,48 @@ mod word_test {
     fn arithmetic_test() {
         let wb = WordBuilder::new(16);
 
-        assert!(wb.build_word(0x3002) == wb.build_word(0x3000) + 2_u8);
-        assert!(wb.build_word(0x3039) == wb.build_word(0x3000) + wb.build_word(0x0039));
-		assert!(wb.build_word(3) == wb.build_word(34) - wb.build_word(31));
-		assert!(wb.build_word(0) == wb.build_word(0x00FF) & wb.build_word(0));
-		assert!(wb.build_word(3) == wb.build_word(1) | wb.build_word(2));
-		assert!(wb.build_word(0xFFFE) == wb.build_word(0xFFFF) ^ wb.build_word(0x0001));
+        assert!(wb.new_word(0x3002) == wb.new_word(0x3000) + 2_u8);
+        assert!(wb.new_word(0x3039) == wb.new_word(0x3000) + wb.new_word(0x0039));
+		assert!(wb.new_word(3) == wb.new_word(34) - wb.new_word(31));
+		assert!(wb.new_word(0) == wb.new_word(0x00FF) & wb.new_word(0));
+		assert!(wb.new_word(3) == wb.new_word(1) | wb.new_word(2));
+		assert!(wb.new_word(0xFFFE) == wb.new_word(0xFFFF) ^ wb.new_word(0x0001));
     }
 
     #[test]
     fn rotate_test() {
         let wb = WordBuilder::new(16);
 
-        assert!(wb.build_word(0x0022) == wb.build_word(0x0011) << wb.build_word(1));
-        assert!(wb.build_word(16) == wb.build_word(1) << wb.build_word(4));
-		assert!(wb.build_word(1) == wb.build_word(16) >> wb.build_word(4));
+        assert!(wb.new_word(0x0022) == wb.new_word(0x0011) << wb.new_word(1));
+        assert!(wb.new_word(16) == wb.new_word(1) << wb.new_word(4));
+		assert!(wb.new_word(1) == wb.new_word(16) >> wb.new_word(4));
 
-		let result = wb.build_word(0b1111111111111101) << 1_u8;
-		assert!(result == wb.build_word(0b1111111111111011));
+		let result = wb.new_word(0b1111111111111101) << 1_u8;
+		assert!(result == wb.new_word(0b1111111111111011));
 
-        let result = wb.build_word(0b1111111111111101) << wb.build_word(1);
-		assert!(result == wb.build_word(0b1111111111111011));
+        let result = wb.new_word(0b1111111111111101) << wb.new_word(1);
+		assert!(result == wb.new_word(0b1111111111111011));
 
-		let result = wb.build_word(0b1111111111111011) >> wb.build_word(1);
-		assert!(result == wb.build_word(0b1111111111111101));
+		let result = wb.new_word(0b1111111111111011) >> wb.new_word(1);
+		assert!(result == wb.new_word(0b1111111111111101));
 
-		let result = wb.build_word(1) >> wb.build_word(0xFFFF);
-		assert!(result == wb.build_word(0b10));
+		let result = wb.new_word(1) >> wb.new_word(0xFFFF);
+		assert!(result == wb.new_word(0b10));
 
-		let result = wb.build_word(0b1) << wb.build_word(16);
-		assert!(result == wb.build_word(0b1));
+		let result = wb.new_word(0b1) << wb.new_word(16);
+		assert!(result == wb.new_word(0b1));
 
-        let result = wb.build_word(0x7000) << wb.build_word(0x0100);
-		assert!(wb.build_word(0x7000) == result);
+        let result = wb.new_word(0x7000) << wb.new_word(0x0100);
+		assert!(wb.new_word(0x7000) == result);
 
-        let result = wb.build_word(0x7000) >> wb.build_word(0x0100);
-		assert!(wb.build_word(0x7000) == result);
+        let result = wb.new_word(0x7000) >> wb.new_word(0x0100);
+		assert!(wb.new_word(0x7000) == result);
 
-        let result = wb.build_word(0x7000) << wb.build_word(0x0008);
-		assert!(wb.build_word(0x0070) == result);
+        let result = wb.new_word(0x7000) << wb.new_word(0x0008);
+		assert!(wb.new_word(0x0070) == result);
 
-        let result = wb.build_word(0x7000) >> wb.build_word(0x0008);
-		assert!(wb.build_word(0x0070) == result);
+        let result = wb.new_word(0x7000) >> wb.new_word(0x0008);
+		assert!(wb.new_word(0x0070) == result);
 
 	}
 }

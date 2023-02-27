@@ -5,13 +5,18 @@ pub struct RC5 {
 	word_size: usize, // number of bits per word
 	num_rounds: u8, // number of encryption/decryption rounds
 	key_size: u8, // number of bytes of the secret key
-	word_builder: WordBuilder,
+	wb: WordBuilder,
 	magic_constant_p: Word,
 	magic_constant_q: Word,
 }
 
 impl RC5 {
-	pub fn new(word_size: usize, num_rounds: u8, key_size: u8) -> Self {
+
+	pub fn new(
+			word_size: usize,
+			num_rounds: u8,
+			key_size: u8
+			) -> Self {
 
 		let word_builder = WordBuilder::new(word_size as LargestType);
 		let (p, q) = RC5::get_magic_constants(&word_builder,
@@ -20,37 +25,40 @@ impl RC5 {
 			word_size: word_size,
 			num_rounds: num_rounds,
 			key_size: key_size,
-			word_builder: word_builder,
+			wb: word_builder,
 			magic_constant_p: p,
 			magic_constant_q: q,
 		}
 	}
 
-	fn get_magic_constants(word_builder: &WordBuilder,
-		 word_size_in_bits: usize) -> (Word, Word) {
+	fn get_magic_constants(
+						wb: &WordBuilder,
+						word_size_in_bits: usize
+						) -> (Word, Word) {
+
 		// I acquired these values by manually running the test "calc_magic_consts_test()"
 		// contained in 'utils.rs'.
 
 		match word_size_in_bits {
 			8 => (
-				word_builder.build_word(0xB7),
-				word_builder.build_word(0x9F),
+				wb.new_word(0xB7),
+				wb.new_word(0x9F),
 			),
 			16 => (
-				word_builder.build_word(0xB7E1),
-				word_builder.build_word(0x9E37),
+				wb.new_word(0xB7E1),
+				wb.new_word(0x9E37),
 			),
 			32 => (
-				word_builder.build_word(0xB7E15163),
-				word_builder.build_word(0x9E3779B9),
+				wb.new_word(0xB7E15163),
+				wb.new_word(0x9E3779B9),
 			),
 			64 => (
-				word_builder.build_word(0xB7E151628AED2A6B),
-				word_builder.build_word(0x9E3779B97F4A7C15),
+				wb.new_word(0xB7E151628AED2A6B),
+				wb.new_word(0x9E3779B97F4A7C15),
 			),
 			128 => (
-				word_builder.build_word(0xB7E151628AED2A6ABF7158809CF4F3C7),
-				word_builder.build_word(0x9E3779B97F4A7C15F39CC0605CEDC835),
+				wb.new_word(0xB7E151628AED2A6ABF7158809CF4F3C7),
+				wb.new_word(0x9E3779B97F4A7C15F39CC0605CEDC835),
 			),
 			_ => panic!("Unsoported word size {}", word_size_in_bits),
 		}
@@ -61,17 +69,19 @@ impl RC5 {
 		assert!(self.word_size % 8 == 0);
 
 		let input_size = input.len();
-		let num_bytes_per_word = self.word_size / 8;
-		let num_words = utils::div_ceil(input_size, num_bytes_per_word);
+		let bytes_per_word = self.word_size / 8;
+		let num_words =
+			utils::div_ceil(input_size,
+							bytes_per_word);
 
-		let mut ret = self.word_builder.new_word_vec(num_words);
+		let mut ret = self.wb.new_word_vec(num_words);
 
 		for i in (0..input_size).rev() {
-			if num_bytes_per_word > 1 {
-				ret[i / num_bytes_per_word] = (ret[i / num_bytes_per_word] << 8_u8) + input[i];
+			if bytes_per_word > 1 {
+				ret[i / bytes_per_word] = (ret[i / bytes_per_word] << 8_u8) + input[i];
 			}
 			else {
-				ret[i / num_bytes_per_word] = self.word_builder.build_word(input[i] as LargestType);
+				ret[i / bytes_per_word] = self.wb.new_word(input[i] as LargestType);
 			}
 		}
 
@@ -104,13 +114,15 @@ impl RC5 {
 		let key_size = key.len();
 
 		let bytes_per_word = self.word_size / 8;
-		let num_words = utils::div_ceil(key_size, bytes_per_word);
+		let num_words =
+			utils::div_ceil(key_size, 
+							bytes_per_word);
 
 		let mut l = self.parse(key);
 
 		// Initializing the array S.
 		let t = 2 * (self.num_rounds + 1) as usize;
-		let mut s = self.word_builder.new_word_vec(t);
+		let mut s = self.wb.new_word_vec(t);
 
 		s[0] = self.magic_constant_p;
 		for i in 1..t {
@@ -118,8 +130,8 @@ impl RC5 {
 		}
 
 		// Mixing in the Secret Key.
-		let mut a = self.word_builder.build_word(0);
-		let mut b = self.word_builder.build_word(0);
+		let mut a = self.wb.new_word(0);
+		let mut b = self.wb.new_word(0);
 		
 		let num_iterations = 3 * std::cmp::max(t, num_words);
 		let mut i = 0_usize;
