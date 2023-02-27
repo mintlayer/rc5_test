@@ -1,4 +1,5 @@
 use std::{ops::{Shl, Add, Sub, Shr, BitAnd, BitXor, BitOr}, u8};
+use num::BigUint;
 
 pub type LargestType = u128;
 
@@ -64,7 +65,7 @@ pub struct Word {
 
 #[derive(Clone, Copy)]
 pub struct WordBuilder {
-    word_size: LargestType, // word size in bits. constraint of the word types to be generated
+    word_size: LargestType, // word size in bits. Constraint of the word types to be generated.
 }
 
 impl WordBuilder {
@@ -89,6 +90,8 @@ impl Word {
         }
     }
 
+    /// Checks that the type of 'self' and rhs Word, matches.
+    /// e.g. U32(v) == U32(v) matches correctly.
     fn check_types(&self, rhs: Word) {
         if std::mem::discriminant(&self.data) != 
             std::mem::discriminant(&rhs.data) {
@@ -96,6 +99,7 @@ impl Word {
         }
     }
 
+    /// Returns the Little Endian representation of the word.
     pub fn to_le_bytes(&self) -> Vec<u8> {
         self.data.to_le_bytes()
     }
@@ -200,9 +204,23 @@ impl Add for Word {
         let (word_size, self_value) = self.data.extract();
         let (_, rhs_value) = rhs.data.extract();
 
-        let max_val = self.data.max_val() + 1;
+        let max_val = self.data.max_val();
 
-        Word::new(word_size, (self_value + rhs_value) % max_val)
+        let result;
+        if max_val - self_value < rhs_value {
+            let big_self_value = BigUint::from(self_value);
+            let big_rhs_value = BigUint::from(rhs_value);
+            let big_max_val = BigUint::from(max_val) + BigUint::from(1_u8);
+
+            let res = (big_self_value + big_rhs_value) % big_max_val;
+            let res = res.to_string();
+            result = res.parse::<LargestType>().unwrap();
+        }
+        else { // We can add without overflow
+            result = self_value + rhs_value;
+        }
+
+        Word::new(word_size, result)
     }
 }
 
@@ -212,9 +230,25 @@ impl Add<u8> for Word {
     fn add(self, rhs: u8) -> Self::Output {
         let (word_size, self_value) = self.data.extract();
 
-        let max_val = self.data.max_val() + 1;
+        let max_val = self.data.max_val();
 
-        Word::new(word_size, (self_value + rhs as LargestType) % max_val)
+        let result;
+        if max_val - self_value < (rhs as LargestType) {
+
+            let big_self_value = BigUint::from(self_value);
+            let big_rhs_value = BigUint::from(rhs);
+            let big_max_val = BigUint::from(max_val) + BigUint::from(1_u8);
+
+            let res = (big_self_value + big_rhs_value) % big_max_val;
+
+            let res = res.to_string();
+            result = res.parse::<LargestType>().unwrap();
+        }
+        else { // We can add without overflow
+            result = self_value + rhs as LargestType;
+        }
+
+        Word::new(word_size, result)
     }
 }
 
@@ -224,21 +258,28 @@ impl Sub for Word {
 	fn sub(self, rhs: Self) -> Self::Output {
         self.check_types(rhs);
 
-        let (word_size, mut self_value) = self.data.extract();
-        let (_, mut rhs_value) = rhs.data.extract();
+        let (word_size, self_value) = self.data.extract();
+        let (_, rhs_value) = rhs.data.extract();
 
         let max_val = self.data.max_val();
 
-        self_value = self_value % ( max_val + 1 );
-        rhs_value = rhs_value % ( max_val + 1 );
+        let mut big_self_value = BigUint::from(self_value);
+        let mut big_rhs_value = BigUint::from(rhs_value);
+        let big_max_val = BigUint::from(max_val) + BigUint::from(1_u8);
 
-        let result: LargestType;
-        if self_value > rhs_value {
-            result = self_value - rhs_value;
+        big_self_value = big_self_value % big_max_val.clone();
+        big_rhs_value = big_rhs_value % big_max_val.clone();
+
+        let result;
+        if big_self_value > big_rhs_value {
+            result = big_self_value - big_rhs_value;
         }
         else {
-            result = max_val - rhs_value + self_value + 1;
+            result = big_max_val - big_rhs_value + big_self_value;
         }
+
+        let res_str = result.to_string();
+        let result = res_str.parse::<LargestType>().unwrap();
 
         Word::new(word_size, result)
     }
