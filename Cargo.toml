@@ -5,5 +5,3 @@ authors = ["Ben Marsh <ben.marsh@mintlayer.org>"]
 edition = "2018"
 
 [dependencies]
-num = "0.4.0"
-

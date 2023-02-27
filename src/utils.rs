@@ -258,6 +258,7 @@ mod tests {
 
     #[test]
     fn calc_magic_consts_test() {
+        BigNum::calc_magic_constants(8);
         BigNum::calc_magic_constants(16);
         BigNum::calc_magic_constants(32);
         BigNum::calc_magic_constants(64);
