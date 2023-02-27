@@ -46,13 +46,13 @@ impl WordType {
         (word_size, value)
     }
 
-    pub fn to_be_bytes(&self) -> Vec<u8> {
+    pub fn to_le_bytes(&self) -> Vec<u8> {
         match self {
-            WordType::U8(value) => value.to_be_bytes().to_vec(),
-            WordType::U16(value) => value.to_be_bytes().to_vec(),
-            WordType::U32(value) => value.to_be_bytes().to_vec(),
-            WordType::U64(value) => value.to_be_bytes().to_vec(),
-            WordType::U128(value) => value.to_be_bytes().to_vec(),
+            WordType::U8(value) => value.to_le_bytes().to_vec(),
+            WordType::U16(value) => value.to_le_bytes().to_vec(),
+            WordType::U32(value) => value.to_le_bytes().to_vec(),
+            WordType::U64(value) => value.to_le_bytes().to_vec(),
+            WordType::U128(value) => value.to_le_bytes().to_vec(),
         }
     }
 }
@@ -64,7 +64,7 @@ pub struct Word {
 
 #[derive(Clone, Copy)]
 pub struct WordBuilder {
-    word_size: LargestType, // word size in buts. constraint of the word types to be generated
+    word_size: LargestType, // word size in bits. constraint of the word types to be generated
 }
 
 impl WordBuilder {
@@ -97,8 +97,8 @@ impl Word {
         }
     }
 
-    pub fn to_bytes_be(&self) -> Vec<u8> {
-        self.data.to_be_bytes()
+    pub fn to_le_bytes(&self) -> Vec<u8> {
+        self.data.to_le_bytes()
     }
 }
 

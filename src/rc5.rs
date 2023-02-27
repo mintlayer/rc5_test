@@ -3,15 +3,15 @@ use crate::word::{Word, WordBuilder, LargestType};
 
 pub struct RC5 {
 	word_size: usize, // number of bits per word
-	num_rounds: u32, // number of encryption/decryption rounds
-	key_size: usize, // number of bytes of the secret key
+	num_rounds: u8, // number of encryption/decryption rounds
+	key_size: u8, // number of bytes of the secret key
 	word_builder: WordBuilder,
 	magic_constant_p: Word,
 	magic_constant_q: Word,
 }
 
 impl RC5 {
-	pub fn new(word_size: usize, num_rounds: u32, key_size: usize) -> Self {
+	pub fn new(word_size: usize, num_rounds: u8, key_size: u8) -> Self {
 
 		let word_builder = WordBuilder::new(word_size as LargestType);
 		let (p, q) = RC5::get_magic_constants(&word_builder,
@@ -66,18 +66,13 @@ impl RC5 {
 
 		let mut ret = self.word_builder.new_word_vec(num_words);
 
-		for i in (0..input_size).step_by(num_bytes_per_word) {
-			let word_bytes = &input[i..i+num_bytes_per_word];
-			let mut value: LargestType = 0;
-
-			for j in 0..num_bytes_per_word {
-				value |= word_bytes[j] as LargestType;
-				if j < num_bytes_per_word - 1 { 
-					value <<= 8;
-				}
+		for i in (0..input_size).rev() {
+			if num_bytes_per_word > 1 {
+				ret[i / num_bytes_per_word] = (ret[i / num_bytes_per_word] << 8_u8) + input[i];
 			}
-			
-			ret [i / num_bytes_per_word] = self.word_builder.build_word(value);
+			else {
+				ret[i / num_bytes_per_word] = self.word_builder.build_word(input[i] as LargestType);
+			}
 		}
 
 		ret
@@ -95,7 +90,7 @@ impl RC5 {
 
 		for w in new_output.iter_mut() {
 
-			for byte in w.to_bytes_be() {
+			for byte in w.to_le_bytes() {
 				ret[i] = byte;
 				i = i +1;
 			}
@@ -105,7 +100,6 @@ impl RC5 {
 	}
 
 	pub fn key_expansion(&self, key: &[u8]) -> Vec<Word> {
-		assert!(self.word_size % 8 == 0);
 
 		// Converting the Secret Key from Bytes to Words.
 		let key_size = key.len();
@@ -137,7 +131,7 @@ impl RC5 {
 		let mut a = self.word_builder.build_word(0);
 		let mut b = self.word_builder.build_word(0);
 		
-		let num_iterations = 3 * t;
+		let num_iterations = 3 * std::cmp::max(t, num_words);
 		let mut i = 0_usize;
 		let mut j = 0_usize;
 		for _ in 0..num_iterations {
@@ -155,7 +149,7 @@ impl RC5 {
 	}
 
 	pub fn encrypt(&self, key: &[u8], input_u8: &[u8]) -> Vec<u8> {
-		assert!(key.len() == self.key_size);
+		assert!(key.len() == self.key_size as usize);
 
 		let s = self.key_expansion(key);
 
@@ -176,8 +170,8 @@ impl RC5 {
 		return self.serialize(&output);
 	}
 
-	pub fn decrypt(&self, key: &Vec<u8>, input_u8: &[u8]) -> Vec<u8> {
-		assert!(key.len() == self.key_size);
+	pub fn decrypt(&self, key: &[u8], input_u8: &[u8]) -> Vec<u8> {
+		assert!(key.len() == self.key_size as usize);
 
 		let s = self.key_expansion(key);
 
@@ -187,8 +181,8 @@ impl RC5 {
 		let mut b = input[1];
 
 		for i in (1..=self.num_rounds).rev() {
-			b = ((b - s[2*i as usize+1]) >> a) ^ a;
-			a = ((a - s[2*i as usize]) >> b) ^ b;
+			b = ((b - s[ 2 * i as usize + 1 ]) >> a) ^ a;
+			a = ((a - s[ 2 * i as usize ]) >> b) ^ b;
 		}
 
 		let mut output = Vec::new();
@@ -207,8 +201,8 @@ use super::*;
 
 	#[test]
 	fn serde_test() {
-		let original = vec![0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x0A, 0x0B, 0x0C, 0x0D, 0x0E, 0x0F];
 		let rc5 = RC5::new(32, 12, 16);
+		let original = vec![0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x0A, 0x0B, 0x0C, 0x0D, 0x0E, 0x0F];
 		let parsed = rc5.parse(&original);
 		let res = rc5.serialize(&parsed);
 		assert_eq!(&original[..], &res[..] );
@@ -216,9 +210,9 @@ use super::*;
 
 	#[test]
 	fn key_expansion_test() {
-		let key = vec![0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x0A, 0x0B, 0x0C, 0x0D, 0x0E, 0x0F];
-		let rc5 = RC5::new(32, 12, 16);
+		// This test is aimed to debug the 'key_expansion' method.
+		let key = vec![0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07];
+		let rc5 = RC5::new(16, 16, 8);
 		rc5.key_expansion(&key);
 	}
-
 }
