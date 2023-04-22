@@ -1,2 +1,2 @@
-pub mod algo;
+pub mod rc5;
 

@@ -1,7 +1,5 @@
 use std::cmp::max;
 use std::convert::TryInto;
-use std::mem::size_of;
-
 #[derive(Debug)]
 pub enum Rc5Error {
     InvalidKeyLen,
@@ -64,10 +62,10 @@ impl Rc5 {
     fn expand_key(&mut self, key: &[u8]) {
         let num_blocks = max(self.key_len as usize, 1) / self.bytes_per_word;
 
-        let mut L: Vec<u32> = vec![0; self.key_len - 1];
+        let mut l: Vec<u32> = vec![0; self.key_len - 1];
         for (i, b) in key.iter().enumerate().rev() {
-            L[i / self.bytes_per_word] =
-                (L[i / self.bytes_per_word].checked_shl(8).unwrap_or(0)).wrapping_add(*b as u32);
+            l[i / self.bytes_per_word] =
+                (l[i / self.bytes_per_word].checked_shl(8).unwrap_or(0)).wrapping_add(*b as u32);
         }
 
         let num_words = ((self.num_rounds + 1) * 2) as usize;
@@ -82,17 +80,17 @@ impl Rc5 {
         let mut i = 0;
         let mut j = 0;
 
-        let mut A: u32 = 0;
-        let mut B: u32 = 0;
+        let mut a: u32 = 0;
+        let mut b: u32 = 0;
 
         for _ in 0..max(num_words, num_blocks) * 3 {
             secret_key_table[i] =
-                self.rotate_left(secret_key_table[i].wrapping_add(A.wrapping_add(B)), 3);
-            A = secret_key_table[i];
+                self.rotate_left(secret_key_table[i].wrapping_add(a.wrapping_add(b)), 3);
+            a = secret_key_table[i];
 
-            let a_b = A.wrapping_add(B);
-            L[j] = self.rotate_left(L[j].wrapping_add(a_b), a_b);
-            B = L[j];
+            let a_b = a.wrapping_add(b);
+            l[j] = self.rotate_left(l[j].wrapping_add(a_b), a_b);
+            b = l[j];
 
             i = (i + 1) % num_words;
             j = (j + 1) % num_blocks;
@@ -103,19 +101,19 @@ impl Rc5 {
 
     pub fn encrypt(&self, plaintext: Vec<u8>) -> Result<Vec<u8>, Rc5Error> {
         let words = self.le_bytes_to_words(&plaintext)?;
-        let mut A = words[0].wrapping_add(self.secret_key_table[0]);
-        let mut B = words[1].wrapping_add(self.secret_key_table[1]);
+        let mut a = words[0].wrapping_add(self.secret_key_table[0]);
+        let mut b = words[1].wrapping_add(self.secret_key_table[1]);
 
         for i in 1..=self.num_rounds {
-            A = self
-                .rotate_left(A ^ B, B)
+            a = self
+                .rotate_left(a ^ b, b)
                 .wrapping_add(self.secret_key_table[2 * i]);
-            B = self
-                .rotate_left(B ^ A, A)
+            b = self
+                .rotate_left(b ^ a, a)
                 .wrapping_add(self.secret_key_table[2 * i + 1]);
         }
 
-        Ok(self.words_to_le_bytes(&[A, B]))
+        Ok(self.words_to_le_bytes(&[a, b]))
     }
 
     fn rotate_left(&self, x: u32, y: u32) -> u32 {
@@ -130,17 +128,17 @@ impl Rc5 {
 
     pub fn decrypt(&self, ciphertext: &[u8]) -> Result<Vec<u8>, Rc5Error> {
         let words = self.le_bytes_to_words(&ciphertext)?;
-        let mut B = words[1];
-        let mut A = words[0];
+        let mut b = words[1];
+        let mut a = words[0];
 
         for i in (1..=self.num_rounds).rev() {
-            B = self.rotate_right(B.wrapping_sub(self.secret_key_table[2 * i + 1]), A) ^ A;
-            A = self.rotate_right(A.wrapping_sub(self.secret_key_table[2 * i]), B) ^ B;
+            b = self.rotate_right(b.wrapping_sub(self.secret_key_table[2 * i + 1]), a) ^ a;
+            a = self.rotate_right(a.wrapping_sub(self.secret_key_table[2 * i]), b) ^ b;
         }
-        B = B.wrapping_sub(self.secret_key_table[1]);
-        A = A.wrapping_sub(self.secret_key_table[0]);
+        b = b.wrapping_sub(self.secret_key_table[1]);
+        a = a.wrapping_sub(self.secret_key_table[0]);
 
-        Ok(self.words_to_le_bytes(&[A, B]))
+        Ok(self.words_to_le_bytes(&[a, b]))
     }
 
     fn le_bytes_to_words(&self, block: &[u8]) -> Result<[u32; 2], Rc5Error> {
@@ -178,8 +176,35 @@ mod tests {
         let res = rc5.encrypt(pt.clone()).unwrap();
 
         assert_eq!(ct, res);
+    }
+    #[test]
+    fn encode_b() {
+    	let key = vec![0x2B, 0xD6, 0x45, 0x9F, 0x82, 0xC5, 0xB3, 0x00, 0x95, 0x2C, 0x49, 0x10, 0x48, 0x81, 0xFF, 0x48];
+    	let pt  = vec![0xEA, 0x02, 0x47, 0x14, 0xAD, 0x5C, 0x4D, 0x84];
+    	let ct  = vec![0x11, 0xE4, 0x3B, 0x86, 0xD2, 0x31, 0xEA, 0x64];
+        let rc5 = Rc5::new(&key, Rc5Version::Rc5_32_12_16).unwrap();
+        let res = rc5.encrypt(pt.clone()).unwrap();
 
-        let res = rc5.decrypt(&res).unwrap();
-        assert_eq!(pt, res);
+    	assert!(&ct[..] == &res[..]);
+    }
+
+    #[test]
+    fn decode_a() {
+    	let key = vec![0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x0A, 0x0B, 0x0C, 0x0D, 0x0E, 0x0F];
+    	let pt  = vec![0x96, 0x95, 0x0D, 0xDA, 0x65, 0x4A, 0x3D, 0x62];
+    	let ct  = vec![0x00, 0x11, 0x22, 0x33, 0x44, 0x55, 0x66, 0x77];
+        let rc5 = Rc5::new(&key, Rc5Version::Rc5_32_12_16).unwrap();
+        let res = rc5.decrypt(&ct).unwrap();
+    	assert!(&pt[..] == &res[..]);
+    }
+
+    #[test]
+    fn decode_b() {
+    	let key = vec![0x2B, 0xD6, 0x45, 0x9F, 0x82, 0xC5, 0xB3, 0x00, 0x95, 0x2C, 0x49, 0x10, 0x48, 0x81, 0xFF, 0x48];
+    	let pt  = vec![0x63, 0x8B, 0x3A, 0x5E, 0xF7, 0x2B, 0x66, 0x3F];
+    	let ct  = vec![0xEA, 0x02, 0x47, 0x14, 0xAD, 0x5C, 0x4D, 0x84];
+        let rc5 = Rc5::new(&key, Rc5Version::Rc5_32_12_16).unwrap();
+        let res = rc5.decrypt(&ct).unwrap();
+    	assert!(&pt[..] == &res[..]);
     }
 }
