@@ -37,8 +37,6 @@ impl<const W: usize, const R: usize, const B: usize> Rc5<W, R, B> {
         };
 
         rc5.expand_key(key);
-        rc5.expand_key(key);
-
         Ok(rc5)
     }
 
@@ -115,21 +113,22 @@ impl<const W: usize, const R: usize, const B: usize> Rc5<W, R, B> {
     }
 
     fn le_bytes_to_words(&self, block: &[u8]) -> Result<[u32; 2], Rc5Error> {
-        if block.len() < self.bytes_per_word {
+        if block.len() < self.bytes_per_word * 2 {
             return Err(Rc5Error::BufferOutOfBounds);
         }
 
-        let mut word_buf = [0u32; 2];
-        word_buf[0] = u32::from_le_bytes(block[..self.bytes_per_word].try_into().unwrap());
-        word_buf[1] = u32::from_le_bytes(block[self.bytes_per_word..].try_into().unwrap());
-        Ok(word_buf)
+        let words: Vec<u32> = block
+            .chunks_exact(self.bytes_per_word)
+            .map(|chunk| u32::from_le_bytes(chunk.try_into().unwrap()))
+            .collect();
+        Ok([words[0], words[1]])
     }
 
     fn words_to_le_bytes(&self, words: &[u32; 2]) -> Vec<u8> {
-        let mut bytes: Vec<u8> = Vec::new();
-        bytes.extend_from_slice(&words[0].to_le_bytes());
-        bytes.extend_from_slice(&words[1].to_le_bytes());
-        bytes
+        words
+            .iter()
+            .flat_map(|word| word.to_le_bytes().to_vec())
+            .collect()
     }
 
     fn rotate_left(&self, x: u32, y: u32) -> u32 {
